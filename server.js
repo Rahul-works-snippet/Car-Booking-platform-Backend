@@ -8,8 +8,37 @@ const app = express();
 
 // ─── Middleware ──────────────────────────────────────────────────────────────
 
+const allowedOrigins = process.env.CORS_ORIGIN 
+  ? process.env.CORS_ORIGIN.split(',')
+  : [
+      'http://localhost:4028',
+      'http://localhost:3000',
+      'http://localhost:3001',
+      'https://car-booking-frontend.vercel.app',
+      'https://*.vercel.app',
+    ];
+
 app.use(cors({
-  origin: (process.env.CORS_ORIGIN || 'http://localhost:4028,http://localhost:3000').split(','),
+  origin: (origin, callback) => {
+    // Allow requests with no origin (mobile apps, etc)
+    if (!origin) return callback(null, true);
+    
+    // Check if origin is in allowed list or matches wildcard
+    const isAllowed = allowedOrigins.some(allowed => {
+      if (allowed === '*') return true;
+      if (allowed.includes('*')) {
+        const regex = new RegExp(allowed.replace(/\*/g, '.*'));
+        return regex.test(origin);
+      }
+      return origin === allowed;
+    });
+    
+    if (isAllowed) {
+      callback(null, true);
+    } else {
+      callback(new Error(`CORS not allowed for origin: ${origin}`));
+    }
+  },
   credentials: true,
 }));
 app.use(express.json());
